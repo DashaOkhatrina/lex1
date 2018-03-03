@@ -1,0 +1,219 @@
+
+%scaner_name Dasha
+%codes_type Dasha_code
+
+%ident_name OD
+
+%token_fields
+"unsigned __int128 int_val;
+__float128 float_val;"
+
+
+
+%strings "buffer.clean();":"token.code=(buffer.length()==1)?Char:String;"
+{"([:ndq:]$write|""$write)*"} 
+
+%class_members
+"__int128 integer_part;
+__int128 fractional_part;
+size_t exponent;
+ssize_t exp_sign;
+size_t frac_part_num_digits;
+bool is_float;
+char32_t precision;
+char32_t char_code;"
+
+%codes
+Module,      Import,       Export,      Var,
+Type,        Array,        Long,        Short,
+Int,         Float,        Uint,        Bool,
+Char,        String,       Void,        Byte,
+Int8_t,      Int16_t,      Int32_t,     Int64_t,
+Int128_t,    Uint8_t,      Uint16_t,    Uint64_t,
+Uint128_t,   Float32_t,    Float64_t,   Float128_t,
+Bool8_t,     Bool16_t,     Bool32_t,    Bool64_t,
+Char8_t,     Char16_t,     Char32_t,    String8_t,
+String16_t,  String32_t,   Fn,          Val,
+Ref,         Const ref,    Enum,        Struct,
+True,        False,        If,          Then,
+Elif,        Else,         Endif,       For,
+Else,        While,        Repeat,      Until,
+Spider,      Case,         Break,       Ontinue,
+Return,      Read,         Print,       Match
+
+
+%idents {[:Letter:]|[:letter:]|_}{[:Letter:]|[:letter:]|_|[:digits:]}
+
+%impl_additions "
+  #include <quadmath>
+
+  size_t digit2int(char32_t ch) {
+    size_t v = ch - U'0';
+    return (v<=9)? v : (v&0b1101'1111) - 7;
+  }
+  __int128 setexp(char32_t ch) {
+    return (ch == '-')? -1 : 1;
+  }
+
+  __float128 lexem_code: build_float(){
+    return integer_part + fractional_part*powq(10,-frac_part_num_digits)+exp_sign*exponent;
+  }
+
+  lexem_code precision2code(char32_t ch){
+    switch (ch) {
+      case: 'S':
+        return Single;
+        break;
+      case: 'D':
+        return Double;
+        break;
+      case: 'E':
+        return Extended;
+        break;
+      case: 'Q':
+        return Quatro;
+        break;
+      default:
+        return Single;
+        break;
+    }
+  }
+"
+
+%keywords
+
+"module" : Module,
+"import" : Import,
+"export" : Export,
+"var" : Var,
+"type" : Type,
+"array" : Array,
+"long" : Long,
+"short" : Short,
+"int" : Int,
+"float" : Float,
+"uint" : Uint,
+"bool" : Bool,
+"char" : Char,
+"string" : String,
+"void" : Void,
+"byte" : Byte,
+"int8_t" : Int8_t,
+"int16_t" : Int16_t,
+"int32_t" : Int32_t,
+"int64_t" : Int64_t,
+"int128_t" : Int128_t,
+"uint8_t" : Uint8_t,
+"uint16_t" : Uint16_t,
+"uint64_t" : Uint64_t,
+"uint128_t" : Uint128_t,
+"float32_t" : Float32_t,
+"float64_t" : Float64_t,
+"float128_t" : Float128_t,
+"bool8_t" : Bool8_t,
+"bool16_t" : Bool16_t,
+"bool32_t" : Bool32_t,
+"bool64_t" : Bool64_t,
+"char8_t" : Char8_t,
+"char16_t" : Char16_t,
+"char32_t" : Char32_t,
+"string8_t" : String8_t,
+"string16_t" : String16_t,
+"string32_t" : String32_t,
+"fn" : Fn,
+"val" : Val,
+"ref" : Ref,
+"const ref" : Const ref,
+"enum" : Enum,
+"struct" : Struct,
+"true" : True,
+"false" : False,
+"if" : If,
+"then" : Then,
+"elif" : Elif,
+"else" : Else,
+"endif" : Endif,
+"for" : For,
+"else" : Else,
+"while" : While,
+"repeat" : Repeat,
+"until" : Until,
+"spider" : Spider,
+"case" : Case,
+"break" : Break,
+"ontinue" : Ontinue,
+"return" : Return,
+"read" : Read,
+"print" : Print,
+"match" : Match
+
+
+%delimiters
+
+"=" : Equal,
+";" : Semicolon,
+"," : Comma,
+"+" : Plus, 
+"-" : Minus, 
+"*" : Mul, 
+"/" : Div, 
+"%" : Mod,
+"^" : Xor,
+"|" : Or, 
+"&" : Add, 
+"~" : Not,
+"<<" : Lshift, 
+">>" : Rshift,
+"{" : Open_func,    
+"}" : Close_func,
+"(" : Open_round,   
+")" : Close_round,
+"[" : Open_square, 
+"]" : Close_square,
+"?" : Question_mark,
+"!" : Exclamation_mark,
+"<" : Less_than,
+">" : Greater_than,
+"#" : Hash,
+"@" : At,
+"." : Full_stop,
+":" : Colon,
+"<<<" : Llshift,
+">>>" : Rrshift,
+"'" : Acute
+
+%numbers "int_val = 0;
+          float_val = 0;
+          is_float = false;
+          integer_part = 0;
+          fractional_part = 0;
+          exponent = 1;
+          exp_sign = 1;
+          frac_part_num_digits = 0;
+          token.code = Integer;"
+          :
+          "
+          if(is_float){
+            token.float_val=build_float();
+            token.code = precision2code(precision);
+          } else {
+            token.int_val=integer_part;
+            token.code = Integer;
+          }"	
+          %action addHexDigit "integer_part = (integer_part << 4) + digit2int(ch);"
+          %action addDecDigit "integer_part = integer_part * 10 + digit2int(ch);"
+          %action addBinDigit "integer_part = (integer_part << 1) + digit2int(ch);"
+          %action addOctDigit "integer_part = (integer_part << 3) + digit2int(ch);"
+          %action setIsFloat "is_float = true;"
+          %action addDigitToDegree "exponent = exponent * 10 + digit2int(ch);"
+          %action addDecToFrac "fractional_part = fractional_part / 10 + digit2int(ch); frac_part_num_digits += 1;"
+          %action setExpSign "exp_sign = setexp(ch);"
+          %action setPrecision "precision = ch; is_float = true;"
+	                                
+{[:digits:]$addDecDigit('?[:digits:]$addDecDigit)*(.$setIsFloat[:digits:]$addDecToFrac('?[:digits:]$addDecToFrac*))
+?(((S|s)|(D|d)|(E|e)|(Q|q))$setPrecision(\+|-)$setExpSign?[:digits:]$addDigitToDegree('?[:digits:]$addDigitToDegree)*)?|
+0o[:odigits:]$addOctDigit('?[:odigits:]$addOctDigit)*|
+0(b|B)[:bdigits:]$addBinDigit('?[:bdigits:]$addBinDigit)*|
+0(x|X)[:xdigits:]$addHexDigit('?[:xdigits:]$addHexDigit)*}
+
+
